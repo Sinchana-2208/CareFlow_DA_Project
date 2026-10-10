@@ -1,0 +1,6 @@
+-pandas
+-numpy
+-googlecolab
+-matplotlib
+-pm4py
+-pytesy
