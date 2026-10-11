@@ -1,6 +1,5 @@
 import pandas as pd
 
-# Dummy Sepsis Event Log Data
 event_data = {
     "case:concept:name": [
         "CASE_001", "CASE_001", "CASE_001", "CASE_001", "CASE_001",
@@ -43,8 +42,8 @@ event_data = {
 }
 
 df_event = pd.DataFrame(event_data)
-
 # Convert timestamps to datetime
+
 df_event["time:timestamp"] = pd.to_datetime(
     df_event["time:timestamp"]
 )
