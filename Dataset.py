@@ -49,3 +49,55 @@ df_event["time:timestamp"] = pd.to_datetime(
 )
 
 print(df_event)
+
+# =====================================
+# DATASET VALIDATION
+# =====================================
+
+# 1. Check required columns
+required_columns = [
+    "case:concept:name",
+    "concept:name",
+    "time:timestamp",
+    "Age"
+]
+
+missing_columns = [
+    column
+    for column in required_columns
+    if column not in df_event.columns
+]
+
+if missing_columns:
+    raise ValueError(
+        f"Missing required columns: {missing_columns}"
+    )
+
+print("\nAll required columns are present.")
+
+# 2. Check missing values
+print("\nMissing values in each column:")
+print(df_event[required_columns].isnull().sum())
+
+# 3. Check the timestamp data type
+print("\nTimestamp data type:")
+print(df_event["time:timestamp"].dtype)
+
+# 4. Check age consistency within each case
+age_counts = df_event.groupby(
+    "case:concept:name"
+)["Age"].nunique()
+
+inconsistent_age_cases = age_counts[
+    age_counts > 1
+]
+
+print("\nCases with inconsistent ages:")
+print(inconsistent_age_cases)
+
+# 5. Sort events in chronological order
+df_event = df_event.sort_values(
+    by=["case:concept:name", "time:timestamp"]
+).reset_index(drop=True)
+
+print("\nDataset validation completed.")
