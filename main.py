@@ -11,7 +11,7 @@ import seaborn as sns
 
 # --- STEP 1: Load the Sepsis Event Log ---
 print("--- Step 1: Loading Sepsis Event Log ---")
-file_path = "Sepsis_Cases_Event_Log.xlsx" # Or update if stored inside a folder like data/
+file_path = "data/Sepsis_Cases_Event_Log.xlsx" # Updated to point to the data/ folder
 
 if os.path.exists(file_path):
     df_event = pd.read_excel(file_path, sheet_name='Event Log')
@@ -20,7 +20,7 @@ if os.path.exists(file_path):
     print(f"Total Event Rows: {df_event.shape[0]}")
     print(f"Total Patient Cases: {df_summary.shape[0]}")
 else:
-    print(f"File {file_path} not found. Please ensure the Excel file is in your repository.")
+    print(f"File {file_path} not found. Please ensure the Excel file is in the data/ folder.")
 
 # --- STEP 2: Data Cleaning & Preprocessing ---
 print("\n--- Step 2: Cleaning Event Log Data ---")
