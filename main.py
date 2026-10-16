@@ -11,7 +11,7 @@ import seaborn as sns
 
 # --- STEP 1: Load the Sepsis Event Log ---
 print("--- Step 1: Loading Sepsis Event Log ---")
-file_path = "data/Sepsis_Cases_Event_Log.xlsx" # Updated to point to the data/ folder
+file_path = "data/Sepsis_Cases_Event_Log.xlsx"
 
 if os.path.exists(file_path):
     df_event = pd.read_excel(file_path, sheet_name='Event Log')
@@ -40,20 +40,43 @@ if duplicates_count > 0:
 print("\n=== Event Log Info After Cleaning ===")
 print(df_event.info())
 
-# --- STEP 3: Exploratory Data Analysis & Visualizations ---
-print("\n--- Step 3: Generating Process Mining Visualizations ---")
+# --- STEP 3: Generate & Export Process Metrics (Outputs) ---
+print("\n--- Step 3: Generating Process Metrics & Artifacts ---")
+
+# Create an outputs directory if it doesn't exist (just like an advanced pipeline)
+output_dir = "outputs"
+os.makedirs(output_dir, exist_ok=True)
+
+# 1. Compute and export Top Clinical Activities
+top_activities = df_event['concept:name'].value_counts().reset_index()
+top_activities.columns = ['Activity', 'Frequency']
+top_activities_path = os.path.join(output_dir, "top_clinical_activities.csv")
+top_activities.to_csv(top_activities_path, index=False)
+print(f"-> Exported top activities to: {top_activities_path}")
+
+# 2. Compute case-level metrics summary
+case_metrics = df_event.groupby('case:concept:name').agg(
+    Event_Count=('concept:name', 'count'),
+    Start_Time=('time:timestamp', 'min'),
+    End_Time=('time:timestamp', 'max')
+).reset_index()
+case_metrics_path = os.path.join(output_dir, "case_metrics_summary.csv")
+case_metrics.to_csv(case_metrics_path, index=False)
+print(f"-> Exported case metrics to: {case_metrics_path}")
+
+
+# --- STEP 4: Exploratory Data Analysis & Visualizations ---
+print("\n--- Step 4: Generating Process Mining Visualizations ---")
 sns.set_theme(style="whitegrid")
 
 # Create a figure with subplots for process insights
 fig, axes = plt.subplots(1, 2, figsize=(18, 7))
 
 # Plot 1: Top 10 Most Frequent Clinical Activities
-top_activities = df_event['concept:name'].value_counts().head(10).reset_index()
-top_activities.columns = ['Activity', 'Count']
-
+top_10 = top_activities.head(10)
 sns.barplot(
-    data=top_activities,
-    x='Count',
+    data=top_10,
+    x='Frequency',
     y='Activity',
     palette='Blues_r',
     hue='Activity',
@@ -79,6 +102,12 @@ if 'Age' in df_event.columns:
     axes[1].set_ylabel('Patient Count', fontsize=12)
 
 plt.tight_layout()
+
+# Save the visualization figure into outputs as well
+plot_path = os.path.join(output_dir, "sepsis_eda_plots.png")
+plt.savefig(plot_path, dpi=300)
+print(f"-> Exported EDA plot figure to: {plot_path}")
+
 plt.show()
 
-print("\n--- Sepsis Process Analysis Script Executed Successfully! ---")
+print("\n--- CareFlow Pipeline Executed & Artifacts Saved Successfully! ---")
