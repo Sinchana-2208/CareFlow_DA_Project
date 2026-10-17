@@ -121,3 +121,10 @@ print(" TOP 5 TRANSITION BOTTLENECKS (LONGEST DELAYS)")
 print("="*50)
 print(bottlenecks[['From_Activity', 'To_Activity', 'Avg_Duration_Hours']].head(5).to_string(index=False))
 print("="*50)
+
+from src.database import save_to_sqlite, run_sample_queries
+
+# --- STEP 6: SQL Database Integration ---
+print("\n--- Step 6: Storing Data in SQLite Database ---")
+save_to_sqlite(df_event, variant_summary, bottlenecks, case_metrics)
+run_sample_queries()
