@@ -28,8 +28,7 @@ else:
 # --- STEP 2: Data Cleaning & Preprocessing ---
 print("\n--- Step 2: Cleaning Event Log Data ---")
 df_event = df_event.dropna(subset=['case:concept:name', 'time:timestamp'])
-df_event['time:timestamp'] = pd.to_datetime(df_event['time:timestamp'])
-
+df_event['time:timestamp'] = pd.to_datetime(df_event['time:timestamp'], utc=True)
 duplicates_count = df_event.duplicated().sum()
 if duplicates_count > 0:
     df_event = df_event.drop_duplicates()
