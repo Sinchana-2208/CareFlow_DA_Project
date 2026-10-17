@@ -29,6 +29,7 @@ else:
 print("\n--- Step 2: Cleaning Event Log Data ---")
 df_event = df_event.dropna(subset=['case:concept:name', 'time:timestamp'])
 df_event['time:timestamp'] = pd.to_datetime(df_event['time:timestamp'], utc=True)
+
 duplicates_count = df_event.duplicated().sum()
 if duplicates_count > 0:
     df_event = df_event.drop_duplicates()
@@ -107,6 +108,16 @@ plot_path = os.path.join(output_dir, "process_variants_and_bottlenecks.png")
 plt.savefig(plot_path, dpi=300)
 print(f"-> Saved process analysis chart to: {plot_path}")
 
-plt.show()
-
 print("\n--- CareFlow Process Analytics Pipeline Completed Successfully! ---")
+
+# --- STEP 5: Display Summary Outputs in Terminal ---
+print("\n" + "="*50)
+print(" TOP 5 CLINICAL PROCESS VARIANTS")
+print("="*50)
+print(variant_summary.head(5).to_string(index=False))
+
+print("\n" + "="*50)
+print(" TOP 5 TRANSITION BOTTLENECKS (LONGEST DELAYS)")
+print("="*50)
+print(bottlenecks[['From_Activity', 'To_Activity', 'Avg_Duration_Hours']].head(5).to_string(index=False))
+print("="*50)
