@@ -5,3 +5,6 @@ __pycache__/
 # Python virtual environments
 .venv/
 venv/
+
+# Generated pathway analysis output
+outputs/pathway_variants.csv
