@@ -21,23 +21,21 @@ Repository Structure
 CareFlow_DA_Project/
 │
 ├── data/
-│   └── Sepsis_Cases_Event_Log.xlsx     # Raw Sepsis event log dataset
-│
-├── outputs/
-│   ├── careflow.db                     # Generated SQLite database
-│   ├── process_variants.csv            # Top clinical pathway variants
-│   ├── transition_bottlenecks.csv      # Delay durations between clinical activities
-│   ├── case_metrics_summary.csv        # Per-case duration and event count metrics
-│   └── process_variants_and_bottlenecks.png  # Exported analytics chart
+│   └── Sepsis_Cases_Event_Log.xlsx     # Source clinical event log dataset
 │
 ├── src/
-│   ├── __init__.py                     # Module initialization
-│   ├── analyzer.py                     # Core process mining & pipeline functions
-│   └── database.py                     # SQLite database loader and SQL query engine
+│   ├── init.py
+│   ├── analyzer.py                      # Process mining & metrics computation
+│   └── database.py                      # SQLite database storage & SQL query execution
 │
-├── main.py                             # Pipeline orchestrator script
-├── README.md                           # Project documentation
-└── requirements.txt                    # Python dependencies
+├── outputs/
+│   ├── careflow.db                      # SQLite database storing processed tables
+│   ├── process_variants.png             # Visual chart for top pathway variants
+│   └── transition_bottlenecks.png       # Visual chart for top transition delays
+│
+├── main.py                              # End-to-end execution script
+├── README.md                            # Project documentation & portfolio summary
+└── requirements.txt                     # Project dependencies
 
 
 Tech Stack
