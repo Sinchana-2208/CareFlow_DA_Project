@@ -1,442 +1,80 @@
-# \# CareFlow Intelligence — Clinical Pathway Process Mining
+CareFlow Intelligence - Clinical Pathway Process Mining
 
-# 
+About the project
 
-# \## 1. Project Overview
+CareFlow is a data analytics project that looks at recorded patient activity data to understand how cases move through different stages of a clinical process.
 
-# 
+The main aim is to study the activities in the event log, understand the order in which they happen, and look at the time between recorded events. We are using Python for the analysis, with plans to use Power BI to present the findings.
 
-# CareFlow Intelligence is a data analytics project focused on exploring recorded clinical event logs and reconstructing observed patient pathways.
+What I have worked on
 
-# 
+1. Transition-time analysis
 
-# The project uses process-mining concepts and descriptive analytics to examine activity sequences, elapsed time between consecutive activities, recorded case durations, and variations in observed pathways.
+I created a Python script to calculate the time between consecutive activities for each case. It also summarizes recorded case durations and highlights long gaps between events for further investigation.
 
-# 
+File: src/transition_time_analysis.py
 
-# The goal is to produce reproducible, evidence-based analysis that can support further investigation of clinical processes.
+2. Patient pathway analysis
 
-# 
+I added another script to reconstruct the activity sequence for each case and identify cases with the same sequence. The results include the number of cases following each pathway and its percentage of the dataset.
 
-# > \*\*Important:\*\* This project provides descriptive process analytics. Its results do not independently establish clinical correctness, quality of care, patient outcomes, or operational inefficiency.
+File: src/pathway_variant_analysis.py
 
-# 
+Dataset and findings
 
-# \## 2. Project Objectives
+The analysis was run using the Sepsis event-log Excel file, on the worksheet named "Event Log Visual".
 
-# 
+Some of the results from the current dataset are:
 
-# \- Understand the structure and quality of the available event-log dataset.
+- Total recorded events: 15,190
+- Cases analyzed: 1,049
+- Different activities: 16
+- Unique pathway variants: 845
 
-# \- Reconstruct chronological activity sequences for individual cases.
+The most common complete recorded pathway in the current analysis is:
 
-# \- Identify common and less-common recorded pathway variants.
+ER Registration -> ER Triage -> ER Sepsis Triage
 
-# \- Measure elapsed time between consecutive recorded activities.
+This pathway appears in 35 cases, which is about 3.34% of all cases analyzed.
 
-# \- Summarize the duration of recorded case journeys.
+These numbers describe the available event log. They do not tell us whether a pathway is clinically correct or incorrect.
 
-# \- Flag long elapsed intervals for further investigation.
+Running the scripts
 
-# \- Prepare aggregated analytical outputs for visualization in Power BI.
+The project uses Python, pandas, and openpyxl.
 
-# \- Document analysis methods, assumptions, and limitations.
+Install the required packages with:
 
-# 
+python -m pip install pandas openpyxl
 
-# \## 3. Current Features
+To run the transition-time analysis:
 
-# 
+python .\src\transition_time_analysis.py --file "C:\path\to\Sepsis_Cases_Event_Log_Cleaned_for_Visualization.xlsx" --sheet "Event Log Visual"
 
-# \### 3.1 Transition-Time Analysis
+To run the pathway analysis:
 
-# 
+python .\src\pathway_variant_analysis.py --file "C:\path\to\Sepsis_Cases_Event_Log_Cleaned_for_Visualization.xlsx" --sheet "Event Log Visual"
 
-# \*\*File:\*\* `src/transition\_time\_analysis.py`
+Replace the example file path with the location of the Excel file on your computer.
 
-# 
+The pathway analysis saves its results to:
 
-# This module analyzes elapsed time between consecutive recorded activities.
+outputs/pathway_variants.csv
 
-# 
+Testing
 
-# Current capabilities:
+I added automated tests for both analysis scripts. They check the pathway sequence calculations, pathway counts and percentages, and the transition-time calculations.
 
-# 
+To run all tests:
 
-# \- Load and validate event-log fields.
+python -m unittest discover -s tests -v
 
-# \- Parse timestamps and order events chronologically.
+The latest test run passed all nine tests.
 
-# \- Calculate elapsed time between consecutive activities within each case.
+Current status and next steps
 
-# \- Summarize elapsed-time distributions for observed activity transitions.
+The transition-time and pathway-variant analyses are working. The next steps are to explore the results further and use suitable outputs to build a Power BI dashboard.
 
-# \- Calculate recorded journey durations for individual cases.
+We also need to investigate the meaning of long gaps carefully. Time between two recorded activities does not necessarily mean that a patient was waiting during that entire period.
 
-# \- Investigate long elapsed intervals using a configurable threshold.
-
-# 
-
-# Long elapsed intervals are diagnostic signals. They should not automatically be interpreted as waiting time, process bottlenecks, or evidence of inappropriate care.
-
-# 
-
-# \### 3.2 Patient Pathway Variant Analysis
-
-# 
-
-# \*\*File:\*\* `src/pathway\_variant\_analysis.py`
-
-# 
-
-# This module reconstructs recorded activity sequences and groups cases that follow identical sequences.
-
-# 
-
-# Current capabilities:
-
-# 
-
-# \- Reconstruct chronological activity sequences for each case.
-
-# \- Identify unique observed pathway variants.
-
-# \- Count cases associated with each variant.
-
-# \- Calculate the percentage of analyzed cases associated with each variant.
-
-# \- Rank pathway variants by case frequency.
-
-# \- Export aggregated pathway summaries to CSV.
-
-# 
-
-# The generated CSV contains pathway sequences and aggregate counts rather than individual case IDs.
-
-# 
-
-# \## 4. Dataset and Current Results
-
-# 
-
-# The analysis has been run on the following workbook:
-
-# 
-
-# `Sepsis\_Cases\_Event\_Log\_Cleaned\_for\_Visualization.xlsx`
-
-# 
-
-# Worksheet:
-
-# 
-
-# `Event Log Visual`
-
-# 
-
-# The workbook is stored locally and is not included in this repository by these instructions.
-
-# 
-
-# \### Dataset Profile
-
-# 
-
-# | Metric | Observed Result |
-
-# |---|---:|
-
-# | Valid event records | 15,190 |
-
-# | Excluded event records during loading | 0 |
-
-# | Unique cases | 1,049 |
-
-# | Unique activities | 16 |
-
-# | Consecutive transitions | 14,141 |
-
-# 
-
-# \### Pathway Variant Findings
-
-# 
-
-# | Metric | Observed Result |
-
-# |---|---:|
-
-# | Cases analyzed | 1,049 |
-
-# | Unique pathway variants | 845 |
-
-# | Cases following the most common recorded pathway | 35 |
-
-# | Percentage following the most common pathway | 3.34% |
-
-# 
-
-# The most common recorded pathway in this analysis was:
-
-# 
-
-# `ER Registration → ER Triage → ER Sepsis Triage`
-
-# 
-
-# It occurred in 35 cases, representing 3.34% of the 1,049 analyzed cases.
-
-# 
-
-# These figures describe the supplied event log. They are not, by themselves, evidence that a pathway is clinically appropriate or inappropriate.
-
-# 
-
-# Results may change if the dataset, its event ordering, or its case definitions change.
-
-# 
-
-# \## 5. Repository Structure
-
-# 
-
-# ```text
-
-# CareFlow\_DA\_Project/
-
-# ├── src/
-
-# │   ├── transition\_time\_analysis.py
-
-# │   └── pathway\_variant\_analysis.py
-
-# ├── tests/
-
-# │   ├── test\_transition\_time\_analysis.py
-
-# │   └── test\_pathway\_variant\_analysis.py
-
-# ├── outputs/
-
-# │   └── pathway\_variants.csv
-
-# ├── .gitignore
-
-# └── README.md
-
-# ```
-
-# 
-
-# The `outputs/pathway\_variants.csv` file is generated locally and ignored by Git.
-
-# 
-
-# The original dataset should remain outside version control unless the project team has explicitly confirmed that sharing it is permitted.
-
-# 
-
-# \## 6. Requirements
-
-# 
-
-# The project uses Python and pandas for event-log processing and Excel/CSV data handling.
-
-# 
-
-# Install the required packages from a terminal:
-
-# 
-
-# ```powershell
-
-# python -m pip install pandas openpyxl
-
-# ```
-
-# 
-
-# Check that Python is available:
-
-# 
-
-# ```powershell
-
-# python --version
-
-# ```
-
-# 
-
-# Run the commands below from the project root directory.
-
-# 
-
-# \## 7. How to Run the Analysis
-
-# 
-
-# \### 7.1 Transition-Time Analysis
-
-# 
-
-# Run:
-
-# 
-
-# ```powershell
-
-# python .\\src\\transition\_time\_analysis.py --file "C:\\path\\to\\Sepsis\_Cases\_Event\_Log\_Cleaned\_for\_Visualization.xlsx" --sheet "Event Log Visual"
-
-# ```
-
-# 
-
-# Replace `C:\\path\\to\\...` with the actual location of the Excel workbook on your computer.
-
-# 
-
-# This analysis reports dataset-profile information, elapsed times between recorded activities, case-duration summaries, and long-gap diagnostics.
-
-# 
-
-# \### 7.2 Patient Pathway Variant Analysis
-
-# 
-
-# Run:
-
-# 
-
-# ```powershell
-
-# python .\\src\\pathway\_variant\_analysis.py --file "C:\\path\\to\\Sepsis\_Cases\_Event\_Log\_Cleaned\_for\_Visualization.xlsx" --sheet "Event Log Visual"
-
-# ```
-
-# 
-
-# Replace the example file path with the actual location of your workbook.
-
-# 
-
-# The script displays:
-
-# 
-
-# \- Number of cases analyzed.
-
-# \- Number of unique pathway variants.
-
-# \- The ten most common recorded pathways.
-
-# \- Case counts and percentages for the displayed variants.
-
-# 
-
-# By default, the aggregated output is saved to:
-
-# 
-
-# ```text
-
-# outputs/pathway\_variants.csv
-
-# ```
-
-# 
-
-# To specify another output path, use the `--output` argument:
-
-# 
-
-# ```powershell
-
-# python .\\src\\pathway\_variant\_analysis.py --file "C:\\path\\to\\Sepsis\_Cases\_Event\_Log\_Cleaned\_for\_Visualization.xlsx" --sheet "Event Log Visual" --output "outputs/my\_pathway\_results.csv"
-
-# ```
-
-# 
-
-# The custom output path is relative to the current working directory unless an absolute path is supplied.
-
-# 
-
-# \## 8. Automated Tests
-
-# 
-
-# The repository includes tests for transition-time calculations and pathway variant analysis.
-
-# 
-
-# Run the complete test suite from the project root:
-
-# 
-
-# ```powershell
-
-# python -m unittest discover -s tests -v
-
-# ```
-
-# 
-
-# The current test suite contains nine tests:
-
-# 
-
-# \- Five tests for pathway variant analysis.
-
-# \- Four tests for transition-time analysis.
-
-# 
-
-# The tests cover chronological sequence reconstruction, pathway grouping, case counts, percentage calculations, ranking, empty-input behavior, elapsed-time calculations, transition counts, transition labels, and separation between different cases.
-
-# 
-
-# The latest recorded test run completed successfully with all nine tests passing.
-
-# 
-
-# \## 9. Output and Visualization
-
-# 
-
-# The aggregated pathway summary can be used as an input for further analysis and Power BI visualization.
-
-# 
-
-# The pathway CSV includes:
-
-# 
-
-# | Column | Description |
-
-# |---|---|
-
-# | `variant\_id` | Identifier assigned to a pathway variant in the generated summary |
-
-# | `pathway\_variant` | Recorded activity sequence associated with the variant |
-
-# | `case\_count` | Number of cases following the variant |
-
-# | `percentage\_of\_cases` | Percentage of analyzed cases following the variant |
-
-# | `activity\_count` | Number of recorded activities in the sequence |
-
-# 
-
-# The current implementation produces an aggregated pathway table. A Power BI dashboard and additional analytical components can be developed as subsequent project steps.
-
-# 
-
-# \## 10. Analytical Limitations and Data Handling
-
-# 
-
-# \- Event timestamps describe recorded events; elapsed time between
-
+The project is intended for process analysis and reporting, not for making clinical decisions.
