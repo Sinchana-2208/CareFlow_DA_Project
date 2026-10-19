@@ -1,0 +1,9 @@
+project:
+  name: "CareFlow Clinical Analytics"
+  dataset_path: "data/Sepsis_Cases_Event_Log.xlsx"
+  database_path: "outputs/careflow.db"
+  output_dir: "outputs/"
+
+mining:
+  max_variants_to_display: 10
+  time_unit: "hours"
