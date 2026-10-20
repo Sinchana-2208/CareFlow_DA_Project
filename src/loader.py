@@ -1,20 +1,20 @@
-import os
 import pandas as pd
+from pathlib import Path
 
-def load_sepsis_data(file_path="Sepsis_Cases_Event_Log.xlsx"):
-    """
-    Loads Sepsis event log and summary datasets from the specified Excel file.
-    """
-    if not os.path.exists(file_path):
-        raise FileNotFoundError(f"File '{file_path}' not found in root directory.")
-
-    df_event = pd.read_excel(file_path, sheet_name='Event Log')
-    df_summary = pd.read_excel(file_path, sheet_name='Cases Summary')
-
-    print(f"[Loader] Loaded Event Log: {df_event.shape[0]} rows")
-    print(f"[Loader] Loaded Cases Summary: {df_summary.shape[0]} cases")
-
-    return df_event, df_summary
+def load_event_log(file_path: str = "data/Sepsis_Cases_Event_Log.xlsx") -> pd.DataFrame:
+    """Load the raw Sepsis clinical event log dataset from Excel."""
+    path = Path(file_path)
+    
+    if not path.exists():
+        raise FileNotFoundError(f"Event log file not found at: {path}")
+    
+    # Read the Excel file into a pandas DataFrame
+    df = pd.read_excel(path)
+    print(f"Successfully loaded {len(df)} rows from {path.name}")
+    
+    return df
 
 if __name__ == "__main__":
-    load_sepsis_data()
+    # Quick test execution
+    df = load_event_log()
+    print(df.head(2))
