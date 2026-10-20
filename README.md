@@ -19,6 +19,7 @@ Comprehensive Test Suite: Includes unit and integration test coverage across dat
 
 ## Repository Structure
 
+```text
 CareFlow_DA_Project/
 │
 ├── config/
@@ -40,7 +41,7 @@ CareFlow_DA_Project/
 │   └── queries.sql                 # Standalone SQL analytics query routines
 │
 ├── src/
-│   ├── init.py                 # Package initializer
+│   ├── __init__.py                 # Package initializer
 │   ├── analyzer.py                 # Process mining & metrics computation
 │   ├── cleaner.py                  # Data cleaning & transformation routines
 │   ├── database.py                 # SQLite database storage & query execution
@@ -48,7 +49,7 @@ CareFlow_DA_Project/
 │   └── loader.py                   # Excel event log ingestion module
 │
 ├── tests/
-│   ├── init.py                 # Test package discovery initializer
+│   ├── __init__.py                 # Test package discovery initializer
 │   ├── test_bottleneck_analysis.py # Unit tests for transition intervals
 │   ├── test_data_processing.py     # Unit tests for data cleaning & schema validation
 │   ├── test_database.py            # Unit tests for SQLite database interface
