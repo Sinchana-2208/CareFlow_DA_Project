@@ -1,7 +1,7 @@
-#CareFlow: Clinical Pathway Process Mining & Analytics
+# CareFlow: Clinical Pathway Process Mining & Analytics
 CareFlow is an end-to-end data engineering and process mining pipeline designed to analyze, map, and optimize clinical pathways for Sepsis emergency cases. By parsing raw event logs, CareFlow uncovers common treatment pathways, identifies severe transition bottlenecks (delays in care), computes patient throughput metrics, and stores structured analytics into a SQLite database for advanced querying.
 
-##Key Features
+## Key Features
 
 Automated Event Log Ingestion & Cleaning: Parses raw Excel event logs (Sepsis_Cases_Event_Log.xlsx) using dedicated loader.py and cleaner.py modules, standardizing timestamps (utc=True) and case identifiers.
 
@@ -17,7 +17,7 @@ Visual Analytics Generation: Uses eda_plots.py to export summary visual assets i
 
 Comprehensive Test Suite: Includes unit and integration test coverage across data processing, process mining, bottleneck analysis, database logic, and full pipeline execution (tests/).
 
-##Repository Structure
+## Repository Structure
 
 CareFlow_DA_Project/
 │
@@ -60,7 +60,7 @@ CareFlow_DA_Project/
 ├── README.md                       # Project documentation & portfolio summary
 └── requirements.txt                # Project dependencies
 
-##Tech Stack
+## Tech Stack
 
 Language: Python 3.9+
 
@@ -72,20 +72,20 @@ Data Visualization: matplotlib, seaborn
 
 Environment: GitHub Codespaces / VS Code
 
-##Installation & Setup
+## Installation & Setup
 
-####Clone the Repository:
+#### Clone the Repository:
 
 git clone https://github.com/Sinchana-2208/CareFlow_DA_Project.git
 cd CareFlow_DA_Project
 
-####Install Dependencies:
+#### Install Dependencies:
 
 pip install -r requirements.txt
 
 (Ensure pandas, openpyxl, matplotlib, and pytest are installed)
 
-##How to Run
+## How to Run
 
 Execute the primary orchestrator script from the root directory:
 
@@ -105,13 +105,13 @@ Ingests processed tables into SQLite (outputs/careflow.db) via src/database.py.
 
 Executes advanced SQL analytical queries and prints summary results to the terminal interface.
 
-##Running Tests
+## Running Tests
 
 To run the complete unit and integration test suite:
 
 pytest tests/
 
-##Clinical Analytics & SQL Query Highlights
+## Clinical Analytics & SQL Query Highlights
 
 Process Variant Analysis: Identifies standard clinical treatment sequences from Emergency Room (ER) triage through laboratory evaluation (CRP, LacticAcid, Leucocytes) to treatment delivery (IV Antibiotics, IV Liquid).
 
