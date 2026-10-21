@@ -1,74 +1,45 @@
 import sqlite3
-import os
+import pandas as pd
+from pathlib import Path
 
-def save_to_sqlite(df_event, variant_summary, bottlenecks, case_metrics, db_path="outputs/careflow.db"):
-    """Saves analytical DataFrames into a SQLite database."""
-    os.makedirs(os.path.dirname(db_path), exist_ok=True)
-    conn = sqlite3.connect(db_path)
+def save_to_sqlite(cleaned_df: pd.DataFrame, variants_df: pd.DataFrame, bottlenecks_df: pd.DataFrame, db_path: str = "outputs/careflow.db"):
+    """Save processed dataframes into a structured SQLite database."""
+    path = Path(db_path)
+    path.parent.mkdir(exist_ok=True, parents=True)
+    
+    conn = sqlite3.connect(path)
     
     # Write tables to SQLite
-    df_event.to_sql('event_log', conn, if_exists='replace', index=False)
-    variant_summary.to_sql('process_variants', conn, if_exists='replace', index=False)
-    bottlenecks.to_sql('transition_bottlenecks', conn, if_exists='replace', index=False)
-    case_metrics.to_sql('case_metrics', conn, if_exists='replace', index=False)
+    cleaned_df.to_sql('event_logs', conn, if_exists='replace', index=False)
+    variants_df.to_sql('process_variants', conn, if_exists='replace', index=False)
+    bottlenecks_df.to_sql('transition_bottlenecks', conn, if_exists='replace', index=False)
     
     conn.close()
-    print(f"-> Successfully stored all tables into SQLite database at: {db_path}")
+    print(f"Database successfully created and populated at: {path.resolve()}")
 
-def run_sample_queries(db_path="outputs/careflow.db"):
-    """Runs sample SQL queries on the clinical database."""
+def run_sample_query(db_path: str = "outputs/careflow.db"):
+    """Execute a sample query to demonstrate SQL capability."""
     conn = sqlite3.connect(db_path)
-    cursor = conn.cursor()
-    
-    print("\n" + "="*50)
-    print(" SQL QUERY RESULT: Top 3 Longest Transition Bottlenecks")
-    print("="*50)
     query = """
-        SELECT From_Activity, To_Activity, Avg_Duration_Hours 
+        SELECT From_Activity, To_Activity, Mean_Duration_Hours, Transition_Count 
         FROM transition_bottlenecks 
-        ORDER BY Avg_Duration_Hours DESC 
+        ORDER BY Mean_Duration_Hours DESC 
         LIMIT 3;
     """
-    for row in cursor.execute(query):
-        print(f"From: {row[0]} -> To: {row[1]} | Avg Delay: {row[2]:.2f} hours")
-        
+    df = pd.read_sql(query, conn)
     conn.close()
+    print("\nSample SQL Query Result (Top Bottlenecks):")
+    print(df)
 
-def run_advanced_clinical_queries(db_path="outputs/careflow.db"):
-    """Runs advanced SQL analytics on event logs for clinical insights."""
-    conn = sqlite3.connect(db_path)
-    cursor = conn.cursor()
-
-    print("\n" + "="*60)
-    print(" ADVANCED SQL CLINICAL INSIGHTS")
-    print("="*60)
-
-    # 1. Check patient volume per main hospital unit / activity
-    print("\n[Query 1] Top 5 Most Frequently Executed Clinical Activities:")
-    activity_query = """
-        SELECT "concept:name" AS Activity, COUNT(*) AS Execution_Count
-        FROM event_log
-        GROUP BY Activity
-        ORDER BY Execution_Count DESC
-        LIMIT 5;
-    """
-    for row in cursor.execute(activity_query):
-        print(f"  - {row[0]}: {row[1]:,} occurrences")
-
-    # 2. Average throughput duration from case metrics
-    print("\n[Query 2] Overall Case Metrics Summary (from SQL):")
-    metrics_query = """
-        SELECT 
-            COUNT(case:concept:name) AS Total_Cases,
-            AVG(Event_Count) AS Avg_Events_Per_Case,
-            AVG(Duration_Days) AS Avg_Duration_Days
-        FROM case_metrics;
-    """
-    row = cursor.execute(metrics_query).fetchone()
-    if row:
-        print(f"  - Total Tracked Cases: {row[0]:,}")
-        print(f"  - Avg Events per Patient: {row[1]:.1f}")
-        print(f"  - Avg Patient Journey Duration: {row[2]:.1f} days")
-
-    print("="*60)
-    conn.close()
+if __name__ == "__main__":
+    from src.loader import load_event_log
+    from src.cleaner import clean_event_log
+    from src.analyzer import extract_process_variants, calculate_transition_bottlenecks
+    
+    raw = load_event_log()
+    cleaned = clean_event_log(raw)
+    variants = extract_process_variants(cleaned)
+    bottlenecks = calculate_transition_bottlenecks(cleaned)
+    
+    save_to_sqlite(cleaned, variants, bottlenecks)
+    run_sample_query()
