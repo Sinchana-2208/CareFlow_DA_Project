@@ -1,57 +1,65 @@
-# src/analyzer.py
 import pandas as pd
-import numpy as np
 
-def extract_trace_variants(df_event):
-    """
-    Groups event logs by patient case to discover unique clinical pathways (trace variants).
-    """
-    # Ensure sorted by case and timestamp
-    df_sorted = df_event.sort_values(by=['case:concept:name', 'time:timestamp'])
+def extract_process_variants(df: pd.DataFrame) -> pd.DataFrame:
+    """Group events per case to identify dominant clinical pathways (variants)."""
+    # Sort just to be safe
+    df_sorted = df.sort_values(by=['Case_ID', 'Complete_Timestamp'])
     
-    # Group activities into a single ordered pathway string per case
-    traces = df_sorted.groupby('case:concept:name')['concept:name'].apply(lambda x: ' -> '.join(x)).reset_index()
-    traces.columns = ['Case_ID', 'Pathway_Trace']
-    
-    # Count frequency of each unique pathway trace
-    variant_summary = traces['Pathway_Trace'].value_counts().reset_index()
-    variant_summary.columns = ['Pathway_Trace', 'Case_Count']
-    variant_summary['Percentage'] = (variant_summary['Case_Count'] / len(traces)) * 100
-    
-    return traces, variant_summary
-
-def calculate_bottlenecks(df_event):
-    """
-    Calculates transition times between consecutive clinical activities to identify process bottlenecks.
-    """
-    df_sorted = df_event.sort_values(by=['case:concept:name', 'time:timestamp']).copy()
-    
-    # Shift to get the next activity and its timestamp within the same case
-    df_sorted['next_activity'] = df_sorted.groupby('case:concept:name')['concept:name'].shift(-1)
-    df_sorted['next_timestamp'] = df_sorted.groupby('case:concept:name')['time:timestamp'].shift(-1)
-    
-    # Filter out last events (where next_activity is NaN)
-    transitions = df_sorted.dropna(subset=['next_activity', 'next_timestamp']).copy()
-    
-    # Calculate transition duration in hours
-    transitions['transition_time_hours'] = (
-        transitions['next_timestamp'] - transitions['time:timestamp']
-    ).dt.total_seconds() / 3600.0
-    
-    # Group by activity pair (Source -> Target)
-    bottleneck_summary = transitions.groupby(['concept:name', 'next_activity']).agg(
-        Transition_Count=('transition_time_hours', 'count'),
-        Avg_Duration_Hours=('transition_time_hours', 'mean'),
-        Median_Duration_Hours=('transition_time_hours', 'median'),
-        Max_Duration_Hours=('transition_time_hours', 'max')
-    ).reset_index()
-    
-    bottleneck_summary.rename(
-        columns={'concept:name': 'From_Activity', 'next_activity': 'To_Activity'}, 
-        inplace=True
+    # Aggregate activities into a tuple/string sequence per case
+    variants = (
+        df_sorted.groupby('Case_ID')['Activity']
+        .apply(lambda x: ' -> '.join(x))
+        .reset_index(name='Process_Variant')
     )
     
-    # Sort by longest average duration to highlight biggest bottlenecks
-    bottleneck_summary = bottleneck_summary.sort_values(by='Avg_Duration_Hours', ascending=False)
+    # Count frequency of each variant
+    variant_counts = (
+        variants['Process_Variant']
+        .value_counts()
+        .reset_index()
+    )
+    variant_counts.columns = ['Process_Variant', 'Case_Count']
     
-    return bottleneck_summary
+    print(f"Discovered {len(variant_counts)} unique process variants across cases.")
+    return variant_counts
+
+def calculate_transition_bottlenecks(df: pd.DataFrame) -> pd.DataFrame:
+    """Calculate average time differences between consecutive events to spot bottlenecks."""
+    df_sorted = df.sort_values(by=['Case_ID', 'Complete_Timestamp']).copy()
+    
+    # Shift timestamps and activities to get the 'next' event metrics per case
+    df_sorted['Next_Activity'] = df_sorted.groupby('Case_ID')['Activity'].shift(-1)
+    df_sorted['Next_Timestamp'] = df_sorted.groupby('Case_ID')['Complete_Timestamp'].shift(-1)
+    
+    # Calculate duration between current event and next event
+    df_sorted['Transition_Duration'] = (df_sorted['Next_Timestamp'] - df_sorted['Complete_Timestamp']).dt.total_seconds() / 3600 # in hours
+    
+    # Filter out rows where next activity is null (end of case)
+    transitions = df_sorted.dropna(subset=['Next_Activity', 'Transition_Duration']).copy()
+    
+    # Group by transition pair and find average delay
+    bottlenecks = (
+        transitions.groupby(['Activity', 'Next_Activity'])['Transition_Duration']
+        .agg(['mean', 'median', 'count'])
+        .reset_index()
+    )
+    bottlenecks.columns = ['From_Activity', 'To_Activity', 'Mean_Duration_Hours', 'Median_Duration_Hours', 'Transition_Count']
+    bottlenecks = bottlenecks.sort_values(by='Mean_Duration_Hours', ascending=False).reset_index(drop=True)
+    
+    print(f"Analyzed {len(bottlenecks)} unique step transitions for bottlenecks.")
+    return bottlenecks
+
+if __name__ == "__main__":
+    from src.loader import load_event_log
+    from src.cleaner import clean_event_log
+    
+    raw = load_event_log()
+    cleaned = clean_event_log(raw)
+    
+    variants = extract_process_variants(cleaned)
+    print("\nTop 3 Process Variants:")
+    print(variants.head(3))
+    
+    bottlenecks = calculate_transition_bottlenecks(cleaned)
+    print("\nTop 3 Slowest Transition Bottlenecks:")
+    print(bottlenecks.head(3))
