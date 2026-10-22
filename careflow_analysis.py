@@ -1,8 +1,4 @@
-"""Reusable analysis helpers for the CareFlow process-mining prototype.
 
-All calculations are intended for synthetic development data unless an approved,
-de-identified hospital event log is supplied through an authorized workflow.
-"""
 from __future__ import annotations
 
 from pathlib import Path
