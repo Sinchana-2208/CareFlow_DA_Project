@@ -8,3 +8,6 @@ venv/
 
 # Generated pathway analysis output
 outputs/pathway_variants.csv
+
+# Generated activity transition analysis output
+outputs/activity_transition_summary.csv
