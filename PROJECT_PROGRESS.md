@@ -5,16 +5,37 @@
 - Patient transition-time and case-duration analysis
 - Long-transition-gap diagnostics
 - Patient pathway variant analysis
+- Activity-to-activity transition frequency analysis
+- Unified workflow report combining dataset overview, pathway variants,
+  and activity-transition summaries
+
+## Current Dataset Results
+- Valid event records: 15,190
+- Excluded records: 0
+- Patient cases: 1,049
+- Unique activities: 16
+- Unique pathway variants: 845
+- Unique activity transitions: 115
+
+## Generated Reports
+- outputs/workflow_overview.csv
+- outputs/pathway_variants.csv
+- outputs/activity_transition_summary.csv
 
 ## Testing
 - Automated tests for transition-time analysis
 - Automated tests for patient pathway variant analysis
+- Automated tests for activity-transition analysis
+- Integration tests for analysis runners
+- Full test suite: 17 tests passing
 
 ## Next Steps
 - Investigate unusually long transition intervals
-- Review patient pathway patterns
-- Expand process-mining analysis
-- Improve documentation and test coverage
+- Evaluate patient pathway conformance
+- Explore process discovery using PM4Py
+- Expand visualizations and documentation
+- Prepare the final project presentation
 
-Note: This log records project progress and planned work.
-It does not represent clinical findings or validated operational bottlenecks.
+Note: These results describe observed event-log patterns. They do not,
+by themselves, establish clinical significance or validated operational
+bottlenecks.

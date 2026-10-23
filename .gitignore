@@ -1,13 +1,13 @@
-# Python cache files
-__pycache__/
+Python cache files
+
+pycache/
 *.py[cod]
 
-# Python virtual environments
+Python virtual environments
+
 .venv/
 venv/
 
-# Generated pathway analysis output
-outputs/pathway_variants.csv
+Generated analysis outputs
 
-# Generated activity transition analysis output
-outputs/activity_transition_summary.csv
+outputs/*.csv

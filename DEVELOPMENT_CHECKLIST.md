@@ -6,10 +6,11 @@
 - [x] Patient case-duration analysis
 - [x] Long-transition-gap diagnostics
 - [x] Patient pathway variant analysis
-- [x] Automated tests for analysis modules
+- [x] Activity-to-activity transition frequency analysis
+- [x] Unified workflow report runner
+- [x] Automated tests for analysis modules and report runners
 
 ## Planned
-- [ ] Analyze activity-to-activity transition frequencies
 - [ ] Investigate unusually long transition intervals
 - [ ] Evaluate patient pathway conformance
 - [ ] Explore process discovery using PM4Py
