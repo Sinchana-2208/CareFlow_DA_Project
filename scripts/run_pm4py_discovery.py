@@ -40,6 +40,7 @@ def load_events(path: Path) -> pd.DataFrame:
     events["activity_name"] = events["activity_name"].astype(str).str.strip()
     if (events["case_id"] == "").any() or (events["activity_name"] == "").any():
         raise ValueError("Case IDs and activity names cannot be blank.")
+    events = events.drop_duplicates(subset=["case_id", "activity_name", "event_timestamp"], keep="first")
     return events.sort_values(["case_id", "event_timestamp"], kind="stable").reset_index(drop=True)
 
 
