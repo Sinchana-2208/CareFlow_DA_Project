@@ -31,6 +31,13 @@ def audit_event_log(path: Path) -> dict:
         "missing_discharge_cases": [],
         "xray_to_triage_cases": 0,
         "xray_to_triage_rate_percent": None,
+        "case_completion_summary": {
+            "total_cases": 0,
+            "complete_cases": 0,
+            "partial_cases": 0,
+            "complete_case_rate_percent": None,
+        },
+        "review_recommendation": "No audit results available yet.",
         "passed": False,
     }
     if missing_columns:
@@ -42,7 +49,7 @@ def audit_event_log(path: Path) -> dict:
     }
     report["invalid_timestamps"] = int(frame["Timestamp"].isna().sum())
     report["duplicate_event_keys"] = int(
-        frame.duplicated(subset=["Case_ID", "Activity_Name", "Timestamp", *(["Resource_ID"] if "Resource_ID" in frame else [])]).sum()
+        frame.duplicated(subset=["Case_ID", "Activity_Name", "Timestamp", *( ["Resource_ID"] if "Resource_ID" in frame else []) ]).sum()
     )
 
     source_valid = frame.dropna(subset=["Case_ID", "Activity_Name", "Timestamp"]).copy()
@@ -71,6 +78,19 @@ def audit_event_log(path: Path) -> dict:
     report["xray_to_triage_cases"] = returned
     report["xray_to_triage_rate_percent"] = round(100 * returned / len(traces), 2) if len(traces) else None
 
+    total_cases = len(traces)
+    complete_cases = sum(
+        1 for trace in traces
+        if trace and trace[0] == EXPECTED_BOUNDARIES[0] and trace[-1] == EXPECTED_BOUNDARIES[1]
+    )
+    partial_cases = total_cases - complete_cases
+    report["case_completion_summary"] = {
+        "total_cases": total_cases,
+        "complete_cases": complete_cases,
+        "partial_cases": partial_cases,
+        "complete_case_rate_percent": round(100 * complete_cases / total_cases, 2) if total_cases else None,
+    }
+
     hard_fail = (
         any(report["null_required_values"].values())
         or report["invalid_timestamps"] > 0
@@ -80,6 +100,14 @@ def audit_event_log(path: Path) -> dict:
         or bool(report["missing_discharge_cases"])
     )
     report["passed"] = not hard_fail
+    if hard_fail:
+        report["review_recommendation"] = (
+            "Audit failed: fix nulls, duplicate keys, invalid timestamps, or missing case boundaries before ingestion."
+        )
+    else:
+        report["review_recommendation"] = (
+            "Audit passed: the event log is structurally valid and the baseline case boundary checks are satisfied."
+        )
     return report
 
 
