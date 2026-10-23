@@ -11,8 +11,6 @@ import pandas as pd
 
 REQUIRED_COLUMNS = {"Case_ID", "Activity_Name", "Timestamp"}
 EXPECTED_BOUNDARIES = ("Registration", "Discharge")
-
-
 def audit_event_log(path: Path) -> dict:
     if not path.is_file():
         raise FileNotFoundError(f"Event log not found: {path}")
@@ -42,7 +40,6 @@ def audit_event_log(path: Path) -> dict:
     }
     if missing_columns:
         return report
-
     frame["Timestamp"] = pd.to_datetime(frame["Timestamp"], errors="coerce")
     report["null_required_values"] = {
         col: int(frame[col].isna().sum()) for col in ["Case_ID", "Activity_Name", "Timestamp"]
@@ -58,12 +55,9 @@ def audit_event_log(path: Path) -> dict:
         if (group["Timestamp"].diff().dropna() < pd.Timedelta(0)).any():
             out_of_order.append(str(case_id))
     report["non_monotonic_cases"] = out_of_order
-
-    # Re-order before process analysis: event-file row order is not itself a process guarantee.
     valid = source_valid.sort_values(["Case_ID", "Timestamp"], kind="stable")
     if len(valid):
         delta = valid.groupby("Case_ID", sort=False)["Timestamp"].diff()
-        # Sorting should make this impossible, but it detects bad/ambiguous equal timestamps as a separate review item.
         equal_timestamp_rows = valid.duplicated(subset=["Case_ID", "Timestamp"], keep=False)
         report["equal_timestamp_event_rows"] = int(equal_timestamp_rows.sum())
         report["non_positive_timestamp_step_rows"] = int((delta <= pd.Timedelta(0)).fillna(False).sum())
@@ -124,7 +118,5 @@ def main() -> int:
     print(json.dumps(report, indent=2))
     print(f"\nAudit {'PASSED' if report['passed'] else 'FAILED'} — report: {output_path}")
     return 0 if report["passed"] else 1
-
-
 if __name__ == "__main__":
     sys.exit(main())
