@@ -1,23 +1,20 @@
-{{ config(description='Creates one row per event with its preceding/following activity and elapsed time to the next recorded event.') }}
+{{ config(description='Creates one row per event with the previous/next activity and time to the next event.') }}
 
-WITH sequenced AS (
+WITH event_transitions AS (
     SELECT
-        *,
-        LAG(activity_name) OVER case_sequence AS previous_activity,
-        LEAD(activity_name) OVER case_sequence AS next_activity,
-        LEAD(event_timestamp) OVER case_sequence AS next_event_timestamp,
-        LEAD(return_reason) OVER case_sequence AS next_return_reason
-    FROM {{ ref('int_careflow__ordered_events') }}
-    WINDOW case_sequence AS (
-        PARTITION BY case_id
-        ORDER BY event_order
-    )
+        t.*,
+        LAG(t.activity_name) OVER (PARTITION BY t.case_id ORDER BY t.event_order) AS previous_activity,
+        LEAD(t.activity_name) OVER (PARTITION BY t.case_id ORDER BY t.event_order) AS next_activity,
+        LEAD(t.event_timestamp) OVER (PARTITION BY t.case_id ORDER BY t.event_order) AS next_event_timestamp,
+        LEAD(t.return_reason) OVER (PARTITION BY t.case_id ORDER BY t.event_order) AS next_return_reason
+    FROM {{ ref('int_careflow__ordered_events') }} t
 )
+
 SELECT
     *,
     CASE
         WHEN next_event_timestamp IS NOT NULL
-        THEN SAFE_DIVIDE(DATETIME_DIFF(next_event_timestamp, event_timestamp, SECOND), 60.0)
+            THEN SAFE_DIVIDE(DATETIME_DIFF(next_event_timestamp, event_timestamp, SECOND), 60.0)
         ELSE NULL
     END AS elapsed_to_next_minutes
-FROM sequenced
+FROM event_transitions
