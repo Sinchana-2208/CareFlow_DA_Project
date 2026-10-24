@@ -11,6 +11,8 @@ import pandas as pd
 
 REQUIRED_COLUMNS = {"Case_ID", "Activity_Name", "Timestamp"}
 EXPECTED_BOUNDARIES = ("Registration", "Discharge")
+
+
 def audit_event_log(path: Path) -> dict:
     if not path.is_file():
         raise FileNotFoundError(f"Event log not found: {path}")
@@ -29,24 +31,21 @@ def audit_event_log(path: Path) -> dict:
         "missing_discharge_cases": [],
         "xray_to_triage_cases": 0,
         "xray_to_triage_rate_percent": None,
-        "case_completion_summary": {
-            "total_cases": 0,
-            "complete_cases": 0,
-            "partial_cases": 0,
-            "complete_case_rate_percent": None,
-        },
-        "review_recommendation": "No audit results available yet.",
         "passed": False,
     }
     if missing_columns:
         return report
+
+    # Trim whitespace from identifiers and labels before checking required values.
+    for col in ("Case_ID", "Activity_Name"):
+        frame[col] = frame[col].astype("string").str.strip().replace("", pd.NA)
     frame["Timestamp"] = pd.to_datetime(frame["Timestamp"], errors="coerce")
     report["null_required_values"] = {
         col: int(frame[col].isna().sum()) for col in ["Case_ID", "Activity_Name", "Timestamp"]
     }
     report["invalid_timestamps"] = int(frame["Timestamp"].isna().sum())
     report["duplicate_event_keys"] = int(
-        frame.duplicated(subset=["Case_ID", "Activity_Name", "Timestamp", *( ["Resource_ID"] if "Resource_ID" in frame else []) ]).sum()
+        frame.duplicated(subset=["Case_ID", "Activity_Name", "Timestamp", *(["Resource_ID"] if "Resource_ID" in frame else [])]).sum()
     )
 
     source_valid = frame.dropna(subset=["Case_ID", "Activity_Name", "Timestamp"]).copy()
@@ -55,9 +54,12 @@ def audit_event_log(path: Path) -> dict:
         if (group["Timestamp"].diff().dropna() < pd.Timedelta(0)).any():
             out_of_order.append(str(case_id))
     report["non_monotonic_cases"] = out_of_order
+
+    # Re-order before process analysis: event-file row order is not itself a process guarantee.
     valid = source_valid.sort_values(["Case_ID", "Timestamp"], kind="stable")
     if len(valid):
         delta = valid.groupby("Case_ID", sort=False)["Timestamp"].diff()
+        # Sorting should make this impossible, but it detects bad/ambiguous equal timestamps as a separate review item.
         equal_timestamp_rows = valid.duplicated(subset=["Case_ID", "Timestamp"], keep=False)
         report["equal_timestamp_event_rows"] = int(equal_timestamp_rows.sum())
         report["non_positive_timestamp_step_rows"] = int((delta <= pd.Timedelta(0)).fillna(False).sum())
@@ -72,19 +74,7 @@ def audit_event_log(path: Path) -> dict:
     report["xray_to_triage_cases"] = returned
     report["xray_to_triage_rate_percent"] = round(100 * returned / len(traces), 2) if len(traces) else None
 
-    total_cases = len(traces)
-    complete_cases = sum(
-        1 for trace in traces
-        if trace and trace[0] == EXPECTED_BOUNDARIES[0] and trace[-1] == EXPECTED_BOUNDARIES[1]
-    )
-    partial_cases = total_cases - complete_cases
-    report["case_completion_summary"] = {
-        "total_cases": total_cases,
-        "complete_cases": complete_cases,
-        "partial_cases": partial_cases,
-        "complete_case_rate_percent": round(100 * complete_cases / total_cases, 2) if total_cases else None,
-    }
-
+    # Include tied timestamps in the audit so ambiguous event order is reviewed.
     hard_fail = (
         any(report["null_required_values"].values())
         or report["invalid_timestamps"] > 0
@@ -94,14 +84,6 @@ def audit_event_log(path: Path) -> dict:
         or bool(report["missing_discharge_cases"])
     )
     report["passed"] = not hard_fail
-    if hard_fail:
-        report["review_recommendation"] = (
-            "Audit failed: fix nulls, duplicate keys, invalid timestamps, or missing case boundaries before ingestion."
-        )
-    else:
-        report["review_recommendation"] = (
-            "Audit passed: the event log is structurally valid and the baseline case boundary checks are satisfied."
-        )
     return report
 
 
@@ -118,5 +100,7 @@ def main() -> int:
     print(json.dumps(report, indent=2))
     print(f"\nAudit {'PASSED' if report['passed'] else 'FAILED'} — report: {output_path}")
     return 0 if report["passed"] else 1
+
+
 if __name__ == "__main__":
     sys.exit(main())
