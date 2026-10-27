@@ -23,21 +23,34 @@ def main() -> int:
     parser.add_argument("--table", default="raw_event_log", help="Destination table (the script replaces this demo table)")
     parser.add_argument("--location", default=os.getenv("BIGQUERY_LOCATION", "US"), help="BigQuery dataset location")
     parser.add_argument("--csv", default=str(DEFAULT_CSV), help="Path to raw_event_log.csv")
+    parser.add_argument("--dry-run", action="store_true", help="Validate input without uploading to BigQuery")
     args = parser.parse_args()
 
-    if not args.project:
-        parser.error("Set GCP_PROJECT_ID or pass --project YOUR_PROJECT_ID")
+    if not args.project and not args.dry_run:
+        parser.error("Set GCP_PROJECT_ID or pass --project YOUR_PROJECT_ID (or use --dry-run).")
 
     csv_path = Path(args.csv)
     if not csv_path.is_file():
         parser.error(f"CSV file not found: {csv_path}")
 
     preview = pd.read_csv(csv_path)
+    required = {"Case_ID", "Activity_Name", "Timestamp"}
+    missing = sorted(required - set(preview.columns))
+    if missing:
+        parser.error(f"Missing required columns: {', '.join(missing)}")
+    parsed_timestamps = pd.to_datetime(preview["Timestamp"], errors="coerce")
+    if parsed_timestamps.isna().any():
+        parser.error(f"Refusing upload: {int(parsed_timestamps.isna().sum())} invalid timestamp(s).")
     if "Is_Synthetic" not in preview.columns:
         parser.error("Refusing upload: Is_Synthetic column is missing.")
     synthetic = preview["Is_Synthetic"].astype(str).str.strip().str.lower()
     if len(preview) == 0 or not synthetic.isin(["true", "1", "yes"]).all():
         parser.error("Refusing upload: every row must be explicitly marked Is_Synthetic=True.")
+
+    print(f"Validated {len(preview):,} synthetic events for {args.dataset}.{args.table}.")
+    if args.dry_run:
+        print("Dry run complete: no cloud client created and no data uploaded.")
+        return 0
 
     try:
         from google.cloud import bigquery
