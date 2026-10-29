@@ -1,4 +1,8 @@
+"""Reusable analysis helpers for the CareFlow process-mining prototype.
 
+All calculations are intended for synthetic development data unless an approved,
+de-identified hospital event log is supplied through an authorized workflow.
+"""
 from __future__ import annotations
 
 from pathlib import Path
@@ -10,42 +14,49 @@ REQUIRED_COLUMNS = ["Case_ID", "Activity_Name", "Timestamp"]
 
 
 def validate_event_log(event_log: pd.DataFrame) -> dict:
-    """Return a concise validation summary and raise ValueError for critical issues."""
-    missing_columns = sorted(set(REQUIRED_COLUMNS) - set(event_log.columns))
+    """Validate normalized event-log columns and values with actionable errors."""
+    if not isinstance(event_log, pd.DataFrame):
+        raise TypeError("Event log must be a pandas DataFrame.")
+    if event_log.empty:
+        raise ValueError("Event log is empty. Add at least one event row.")
+
+    missing_columns = [column for column in REQUIRED_COLUMNS if column not in event_log.columns]
     if missing_columns:
-        raise ValueError(f"Missing required columns: {missing_columns}")
+        raise ValueError(
+            "Missing required columns: " + ", ".join(missing_columns) +
+            ". Required columns are Case_ID, Activity_Name, and Timestamp."
+        )
 
     data = event_log.copy()
-    if data[REQUIRED_COLUMNS].isna().any().any():
-        raise ValueError("Required fields contain missing values.")
-    if data["Case_ID"].astype(str).str.strip().eq("").any():
-        raise ValueError("Case_ID contains blank values.")
-    if data["Activity_Name"].astype(str).str.strip().eq("").any():
-        raise ValueError("Activity_Name contains blank values.")
+    issues = []
+    for column in ("Case_ID", "Activity_Name"):
+        values = data[column]
+        blank_mask = values.isna() | values.astype("string").str.strip().eq("").fillna(True)
+        if blank_mask.any():
+            rows = (data.index[blank_mask].to_numpy() + 2).tolist()
+            issues.append(f"'{column}' is blank or missing at CSV row(s): {rows}")
 
     data["Timestamp"] = pd.to_datetime(data["Timestamp"], errors="coerce")
-    if data["Timestamp"].isna().any():
-        raise ValueError("Timestamp contains invalid values.")
+    invalid_timestamp_mask = data["Timestamp"].isna()
+    if invalid_timestamp_mask.any():
+        rows = (data.index[invalid_timestamp_mask].to_numpy() + 2).tolist()
+        issues.append(f"'Timestamp' is missing or invalid at CSV row(s): {rows}")
+
+    if issues:
+        raise ValueError("Event-log validation failed. " + "; ".join(issues) + ".")
 
     duplicate_count = int(data.duplicated(REQUIRED_COLUMNS).sum())
     if duplicate_count:
-        raise ValueError(f"Found {duplicate_count} duplicate event keys.")
-
-    chronological = (
-        data.assign(_ts=data["Timestamp"])
-        .sort_values(["Case_ID", "_ts"])
-        .groupby("Case_ID")["_ts"]
-        .apply(lambda values: values.is_monotonic_increasing)
-        .all()
-    )
-    if not chronological:
-        raise ValueError("Events are not chronological within each case.")
+        raise ValueError(
+            f"Event log contains {duplicate_count} duplicate event row(s) "
+            "with the same Case_ID, Activity_Name, and Timestamp. Remove duplicates and retry."
+        )
 
     return {
         "passed": True,
-        "case_count": int(data["Case_ID"].nunique()),
+        "case_count": int(data["Case_ID"].astype("string").str.strip().nunique()),
         "event_count": int(len(data)),
-        "activity_type_count": int(data["Activity_Name"].nunique()),
+        "activity_type_count": int(data["Activity_Name"].astype("string").str.strip().nunique()),
         "duplicate_event_keys": duplicate_count,
     }
 
