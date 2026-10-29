@@ -1,0 +1,2 @@
+plotly==7.1.0
+narwhals==2.28.0
