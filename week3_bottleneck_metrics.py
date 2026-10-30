@@ -12,26 +12,84 @@ import json
 from pathlib import Path
 import pandas as pd
 
-REQUIRED = {"Case_ID", "Activity_Name", "Timestamp"}
+REQUIRED_COLUMNS = ["Case_ID", "Activity_Name", "Timestamp"]
+
+
+def validate_event_log(events: pd.DataFrame) -> dict:
+    """Validate normalized event-log columns and values with actionable errors.
+
+    Row numbers in messages are one-based CSV-style row numbers (header is row 1).
+    The input DataFrame is not modified.
+    """
+    if not isinstance(events, pd.DataFrame):
+        raise TypeError("Event log must be a pandas DataFrame.")
+    if events.empty:
+        raise ValueError("Event log is empty. Add at least one event row.")
+
+    missing = [column for column in REQUIRED_COLUMNS if column not in events.columns]
+    if missing:
+        raise ValueError(
+            "Missing required columns: " + ", ".join(missing) +
+            ". Required columns are Case_ID, Activity_Name, and Timestamp."
+        )
+
+    issues = []
+    for column in ("Case_ID", "Activity_Name"):
+        values = events[column]
+        blank_mask = values.isna() | values.astype("string").str.strip().eq("").fillna(True)
+        if blank_mask.any():
+            rows = (events.index[blank_mask].to_numpy() + 2).tolist()
+            issues.append(f"'{column}' is blank or missing at CSV row(s): {rows}")
+
+    parsed_timestamps = pd.to_datetime(events["Timestamp"], errors="coerce")
+    invalid_timestamp_mask = parsed_timestamps.isna()
+    if invalid_timestamp_mask.any():
+        rows = (events.index[invalid_timestamp_mask].to_numpy() + 2).tolist()
+        issues.append(f"'Timestamp' is missing or invalid at CSV row(s): {rows}")
+
+    if issues:
+        raise ValueError("Event-log validation failed. " + "; ".join(issues) + ".")
+
+    duplicate_count = int(events.duplicated(REQUIRED_COLUMNS).sum())
+    if duplicate_count:
+        raise ValueError(
+            f"Event log contains {duplicate_count} duplicate event row(s) "
+            "with the same Case_ID, Activity_Name, and Timestamp. Remove duplicates and retry."
+        )
+
+    return {
+        "passed": True,
+        "case_count": int(events["Case_ID"].astype("string").str.strip().nunique()),
+        "event_count": int(len(events)),
+        "activity_count": int(events["Activity_Name"].astype("string").str.strip().nunique()),
+        "duplicate_event_rows": duplicate_count,
+    }
 
 
 def load_event_log(path: Path) -> pd.DataFrame:
     """Read, validate, normalize and chronologically sort event records."""
+    path = Path(path)
     if not path.is_file():
-        raise FileNotFoundError(f"Event-log CSV not found: {path}")
-    frame = pd.read_csv(path)
-    missing = sorted(REQUIRED - set(frame.columns))
+        raise FileNotFoundError(f"Event-log CSV not found: {path}. Check the path and try again.")
+    try:
+        frame = pd.read_csv(path)
+    except pd.errors.EmptyDataError as exc:
+        raise ValueError(f"Event-log CSV is empty or has no header: {path}") from exc
+    except (UnicodeDecodeError, pd.errors.ParserError) as exc:
+        raise ValueError(f"Could not read event-log CSV '{path}': {exc}") from exc
+
+    missing = [column for column in REQUIRED_COLUMNS if column not in frame.columns]
     if missing:
-        raise ValueError(f"Missing required columns: {', '.join(missing)}")
+        raise ValueError(
+            "Missing required columns: " + ", ".join(missing) +
+            ". Expected columns: Case_ID, Activity_Name, Timestamp."
+        )
+
     frame["Case_ID"] = frame["Case_ID"].astype("string").str.strip()
     frame["Activity_Name"] = frame["Activity_Name"].astype("string").str.strip()
+    validate_event_log(frame)
     frame["Timestamp"] = pd.to_datetime(frame["Timestamp"], errors="coerce")
-    invalid = frame[["Case_ID", "Activity_Name", "Timestamp"]].isna().any(axis=1)
-    blanks = frame["Case_ID"].eq("") | frame["Activity_Name"].eq("")
-    if invalid.any() or blanks.any():
-        raise ValueError(f"Invalid required values found: {int((invalid | blanks).sum())} row(s).")
-    frame = frame.sort_values(["Case_ID", "Timestamp"], kind="stable").reset_index(drop=True)
-    return frame
+    return frame.sort_values(["Case_ID", "Timestamp"], kind="stable").reset_index(drop=True)
 
 
 def build_transition_metrics(events: pd.DataFrame) -> pd.DataFrame:
