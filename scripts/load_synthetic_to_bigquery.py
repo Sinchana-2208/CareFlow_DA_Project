@@ -5,17 +5,13 @@ This script deliberately refuses data not explicitly marked synthetic. For real 
 exports, create a separate reviewed ingestion path with approved security controls.
 """
 from __future__ import annotations
-
 import argparse
 import os
 from pathlib import Path
 import sys
-
 import pandas as pd
 
 DEFAULT_CSV = Path(__file__).resolve().parents[1] / "careflow_data" / "raw_event_log.csv"
-
-
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--project", default=os.getenv("GCP_PROJECT_ID"), help="Google Cloud project ID (or GCP_PROJECT_ID env var)")
@@ -32,7 +28,6 @@ def main() -> int:
     csv_path = Path(args.csv)
     if not csv_path.is_file():
         parser.error(f"CSV file not found: {csv_path}")
-
     preview = pd.read_csv(csv_path)
     required = {"Case_ID", "Activity_Name", "Timestamp"}
     missing = sorted(required - set(preview.columns))
@@ -46,18 +41,15 @@ def main() -> int:
     synthetic = preview["Is_Synthetic"].astype(str).str.strip().str.lower()
     if len(preview) == 0 or not synthetic.isin(["true", "1", "yes"]).all():
         parser.error("Refusing upload: every row must be explicitly marked Is_Synthetic=True.")
-
     print(f"Validated {len(preview):,} synthetic events for {args.dataset}.{args.table}.")
     if args.dry_run:
-        print("Dry run complete: no cloud client created and no data uploaded.")
+        print("Dry run completed: yet no cloud client created and no data uploaded.")
         return 0
-
     try:
         from google.cloud import bigquery
     except ImportError:
-        print("Missing BigQuery client. Install requirements-cloud.txt first.", file=sys.stderr)
+        print("Missing BigQuery client. Install requirements-cloud.txt first then connect .", file=sys.stderr)
         return 2
-
     client = bigquery.Client(project=args.project)
     dataset_id = f"{args.project}.{args.dataset}"
     dataset = bigquery.Dataset(dataset_id)
@@ -77,6 +69,7 @@ def main() -> int:
         bigquery.SchemaField("Return_Reason", "STRING"),
         bigquery.SchemaField("Is_Synthetic", "BOOL"),
     ]
+    
     job_config = bigquery.LoadJobConfig(
         schema=schema,
         source_format=bigquery.SourceFormat.CSV,
@@ -92,8 +85,9 @@ def main() -> int:
     job.result()
     table = client.get_table(destination)
     print(f"Load complete: {table.num_rows:,} rows in {destination}; location={table.location}.")
+    print("Bigquery connection successful!")
     return 0
-
+    
 
 if __name__ == "__main__":
     raise SystemExit(main())
