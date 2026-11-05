@@ -37,21 +37,39 @@ def main():
     transitions = load_csv("activity_transition_summary.csv")
     timing = load_csv("transition_time_summary.csv")
 
+    # Load long-interval investigation data.
     long_file = OUTPUT_DIR / "long_interval_investigation.csv"
-    long_count = len(pd.read_csv(long_file)) if long_file.exists() else 0
 
+    if long_file.exists():
+        long_intervals = pd.read_csv(long_file)
+    else:
+        long_intervals = pd.DataFrame(
+            columns=["transition", "elapsed_hours"]
+        )
+
+    long_count = len(long_intervals)
+
+    if not long_intervals.empty:
+        long_intervals["elapsed_hours"] = pd.to_numeric(
+            long_intervals["elapsed_hours"],
+            errors="coerce",
+        )
+
+    # Workflow KPI values.
     total_events = int(get_metric(overview, "valid_event_records"))
     total_cases = int(get_metric(overview, "patient_cases"))
     activities = int(get_metric(overview, "unique_activities"))
     variants = len(pathways)
     transition_count = len(transitions)
 
+    # Create expanded dashboard layout.
     fig = make_subplots(
-        rows=4,
+        rows=5,
         cols=2,
         specs=[
             [{"type": "indicator"}, {"type": "indicator"}],
             [{"type": "indicator"}, {"type": "indicator"}],
+            [{"type": "xy"}, {"type": "xy"}],
             [{"type": "xy"}, {"type": "xy"}],
             [{"type": "xy"}, {"type": "xy"}],
         ],
@@ -64,11 +82,14 @@ def main():
             "Most Frequent Activity Transitions",
             "Workflow Overview",
             "Transition Timing Comparison",
+            "Most Frequent Long Intervals (24+ Hours)",
+            "Median Long-Interval Duration",
         ),
-        vertical_spacing=0.12,
+        vertical_spacing=0.10,
         horizontal_spacing=0.12,
     )
 
+    # KPI indicators.
     kpis = [
         (1, 1, total_cases),
         (1, 2, total_events),
@@ -113,13 +134,19 @@ def main():
     )
 
     # Most frequent activity transitions.
-    top_transitions = transitions.nlargest(10, "transition_count").copy()
+    top_transitions = transitions.nlargest(
+        10, "transition_count"
+    ).copy()
+
     top_transitions["transition"] = (
         top_transitions["from_activity"].astype(str)
         + " → "
         + top_transitions["to_activity"].astype(str)
     )
-    top_transitions = top_transitions.sort_values("transition_count")
+
+    top_transitions = top_transitions.sort_values(
+        "transition_count"
+    )
 
     fig.add_trace(
         go.Bar(
@@ -144,17 +171,26 @@ def main():
 
     # Workflow overview metrics.
     overview_plot = overview.copy()
+
     overview_plot["value"] = pd.to_numeric(
-        overview_plot["value"], errors="coerce"
+        overview_plot["value"],
+        errors="coerce",
     )
-    overview_plot = overview_plot.dropna(subset=["value"])
+
+    overview_plot = overview_plot.dropna(
+        subset=["value"]
+    )
 
     fig.add_trace(
         go.Bar(
             x=overview_plot["metric"],
             y=overview_plot["value"],
             name="Workflow metrics",
-            hovertemplate="%{x}<br>Value: %{y:,.0f}<extra></extra>",
+            hovertemplate=(
+                "%{x}<br>"
+                "Value: %{y:,.0f}"
+                "<extra></extra>"
+            ),
         ),
         row=4,
         col=1,
@@ -162,28 +198,43 @@ def main():
 
     # Compare mean and median transition timing.
     timing_plot = timing.copy()
-    for column in ("mean_minutes", "median_minutes", "observations"):
+
+    for column in (
+        "mean_minutes",
+        "median_minutes",
+        "observations",
+    ):
         timing_plot[column] = pd.to_numeric(
-            timing_plot[column], errors="coerce"
+            timing_plot[column],
+            errors="coerce",
         )
 
     timing_plot = timing_plot.dropna(
         subset=["mean_minutes", "median_minutes"]
     )
+
     timing_plot["transition"] = (
         timing_plot["previous_activity"].astype(str)
         + " → "
         + timing_plot["activity"].astype(str)
     )
-    timing_plot = timing_plot.nlargest(10, "observations")
+
+    timing_plot = timing_plot.nlargest(
+        10, "observations"
+    )
 
     if not timing_plot.empty:
+
         fig.add_trace(
             go.Bar(
                 x=timing_plot["transition"],
                 y=timing_plot["mean_minutes"],
                 name="Mean minutes",
-                hovertemplate="%{x}<br>Mean: %{y:,.2f} min<extra></extra>",
+                hovertemplate=(
+                    "%{x}<br>"
+                    "Mean: %{y:,.2f} min"
+                    "<extra></extra>"
+                ),
             ),
             row=4,
             col=2,
@@ -194,12 +245,76 @@ def main():
                 x=timing_plot["transition"],
                 y=timing_plot["median_minutes"],
                 name="Median minutes",
-                hovertemplate="%{x}<br>Median: %{y:,.2f} min<extra></extra>",
+                hovertemplate=(
+                    "%{x}<br>"
+                    "Median: %{y:,.2f} min"
+                    "<extra></extra>"
+                ),
             ),
             row=4,
             col=2,
         )
 
+    # Long-interval investigation analysis.
+    if not long_intervals.empty:
+
+        long_summary = (
+            long_intervals
+            .dropna(subset=["transition", "elapsed_hours"])
+            .groupby("transition")
+            .agg(
+                interval_count=("transition", "size"),
+                median_hours=("elapsed_hours", "median"),
+            )
+            .reset_index()
+        )
+
+        # Top 10 transitions with the most long intervals.
+        top_long = long_summary.nlargest(
+            10, "interval_count"
+        ).sort_values("interval_count")
+
+        # Chart 1: Frequency of long intervals.
+        fig.add_trace(
+            go.Bar(
+                x=top_long["interval_count"],
+                y=top_long["transition"],
+                orientation="h",
+                customdata=top_long["median_hours"],
+                hovertemplate=(
+                    "<b>%{y}</b><br>"
+                    "Long intervals: %{x}<br>"
+                    "Median duration: %{customdata:,.2f} hours"
+                    "<extra></extra>"
+                ),
+                name="Long interval count",
+            ),
+            row=5,
+            col=1,
+        )
+
+        # Chart 2: Median duration of long intervals.
+        duration_data = top_long.sort_values(
+            "median_hours"
+        )
+
+        fig.add_trace(
+            go.Bar(
+                x=duration_data["median_hours"],
+                y=duration_data["transition"],
+                orientation="h",
+                hovertemplate=(
+                    "<b>%{y}</b><br>"
+                    "Median duration: %{x:,.2f} hours"
+                    "<extra></extra>"
+                ),
+                name="Median duration",
+            ),
+            row=5,
+            col=2,
+        )
+
+    # Dashboard layout and styling.
     fig.update_layout(
         title={
             "text": (
@@ -210,15 +325,22 @@ def main():
             "xanchor": "center",
         },
         template="plotly_white",
-        height=1600,
+        height=1950,
         barmode="group",
         showlegend=True,
-        margin={"t": 130, "l": 80, "r": 50, "b": 180},
+        margin={"t": 130, "l": 100, "r": 60, "b": 230},
     )
 
-    fig.update_xaxes(tickangle=-30, automargin=True)
-    fig.update_yaxes(automargin=True)
+    fig.update_xaxes(
+        tickangle=-30,
+        automargin=True,
+    )
 
+    fig.update_yaxes(
+        automargin=True,
+    )
+
+    # Dashboard interpretation note.
     fig.add_annotation(
         text=(
             f"Unique activities: {activities:,} | "
@@ -229,11 +351,12 @@ def main():
         xref="paper",
         yref="paper",
         x=0.5,
-        y=-0.12,
+        y=-0.10,
         showarrow=False,
         align="center",
     )
 
+    # Export standalone interactive HTML dashboard.
     fig.write_html(
         DASHBOARD_FILE,
         include_plotlyjs=True,
@@ -251,4 +374,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
