@@ -1,0 +1,47 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+
+# Automatically add directories to PYTHONPATH without manual sys.path manipulation
+pythonpath = [
+    ".",
+    "scripts",
+]
+
+addopts = [
+    "-ra",
+    "-v",
+    "--strict-markers",
+    "--strict-config",
+    "--tb=short",
+]
+
+markers = [
+    "integration: integration tests requiring file systems or dbt setup",
+    "slow: tests running heavy process mining algorithms",
+]
+
+filterwarnings = [
+    "ignore::DeprecationWarning",
+    "ignore::PendingDeprecationWarning",
+]
+
+[tool.coverage.run]
+branch = true
+source = ["scripts"]
+omit = [
+    "tests/*",
+    "*_test.py",
+]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
+fail_under = 80
