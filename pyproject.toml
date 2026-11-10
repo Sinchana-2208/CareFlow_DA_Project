@@ -2,6 +2,21 @@
 requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
+[project]
+name = "careflow"
+version = "1.0.0"
+description = "CareFlow: clinical pathway process mining (synthetic EHR event logs, PM4Py, dbt/BigQuery, BI)"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = ["pandas>=2.0", "numpy>=1.24", "matplotlib>=3.7", "networkx>=3.0", "pm4py>=2.7"]
+
+[project.optional-dependencies]
+cloud = ["dbt-bigquery>=1.10.5,<2.0", "google-cloud-bigquery>=3.20"]
+dev = ["pytest>=7.0", "pytest-cov>=4.0", "jupyterlab>=4.0"]
+
+[tool.setuptools]
+py-modules = []  # scripts are run directly; nothing to package (avoids flat-layout discovery errors)
+
 [tool.pytest.ini_options]
 minversion = "7.0"
 testpaths = ["tests"]
@@ -17,8 +32,7 @@ pythonpath = [
 
 addopts = [
     "-ra",
-    "-v",
-    "--strict-markers",
+        "--strict-markers",
     "--strict-config",
     "--tb=short",
 ]

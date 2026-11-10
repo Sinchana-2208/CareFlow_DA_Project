@@ -19,9 +19,9 @@ def sample_events():
 
 def test_transition_metrics_calculate_elapsed_minutes():
     result = build_transition_metrics(sample_events())
-    row = result[(result["From_Activity"] == "X-Ray") & (result["To_Activity"] == "Triage")].iloc[0]
+    row = result[(result["Activity_Name"] == "X-Ray") & (result["Next_Activity"] == "Triage")].iloc[0]
     assert row["Transition_Count"] == 1
-    assert row["Mean_Wait_Minutes"] == 15.0
+    assert row["Mean_Elapsed_Minutes"] == 15.0
 
 
 def test_case_metrics_detect_loopback_once_per_case():
@@ -43,7 +43,7 @@ def test_load_event_log_rejects_invalid_timestamp(tmp_path):
     pd.DataFrame({
         "Case_ID": ["C1"], "Activity_Name": ["Registration"], "Timestamp": ["not-a-time"]
     }).to_csv(path, index=False)
-    with pytest.raises(ValueError, match="Invalid required values"):
+    with pytest.raises(ValueError, match="validation failed.*Timestamp"):
         load_event_log(path)
 
 

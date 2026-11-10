@@ -1,0 +1,3 @@
+Case_Trace,Case_Count,Mean_Throughput_Minutes,Share_Percent,Variant
+Registration → Triage → Physician Assessment → X-Ray → Physician Reassessment → Treatment → Discharge,300,129.35333333333332,60.0,Variant 1 – Standard path
+Registration → Triage → Physician Assessment → X-Ray → Triage → Paperwork Completion → Physician Reassessment → Treatment → Discharge,200,182.745,40.0,Variant 2 – X-Ray → Triage loop
