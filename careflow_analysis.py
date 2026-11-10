@@ -4,14 +4,12 @@ All calculations are intended for synthetic development data unless an approved,
 de-identified hospital event log is supplied through an authorized workflow.
 """
 from __future__ import annotations
-
 from pathlib import Path
 from typing import Iterable
 
 import pandas as pd
 
 REQUIRED_COLUMNS = ["Case_ID", "Activity_Name", "Timestamp"]
-
 
 def validate_event_log(event_log: pd.DataFrame) -> dict:
     """Validate normalized event-log columns and values with actionable errors."""
@@ -26,7 +24,6 @@ def validate_event_log(event_log: pd.DataFrame) -> dict:
             "Missing required columns: " + ", ".join(missing_columns) +
             ". Required columns are Case_ID, Activity_Name, and Timestamp."
         )
-
     data = event_log.copy()
     issues = []
     for column in ("Case_ID", "Activity_Name"):
@@ -41,7 +38,6 @@ def validate_event_log(event_log: pd.DataFrame) -> dict:
     if invalid_timestamp_mask.any():
         rows = (data.index[invalid_timestamp_mask].to_numpy() + 2).tolist()
         issues.append(f"'Timestamp' is missing or invalid at CSV row(s): {rows}")
-
     if issues:
         raise ValueError("Event-log validation failed. " + "; ".join(issues) + ".")
 
@@ -51,7 +47,6 @@ def validate_event_log(event_log: pd.DataFrame) -> dict:
             f"Event log contains {duplicate_count} duplicate event row(s) "
             "with the same Case_ID, Activity_Name, and Timestamp. Remove duplicates and retry."
         )
-
     return {
         "passed": True,
         "case_count": int(data["Case_ID"].astype("string").str.strip().nunique()),
@@ -59,8 +54,6 @@ def validate_event_log(event_log: pd.DataFrame) -> dict:
         "activity_type_count": int(data["Activity_Name"].astype("string").str.strip().nunique()),
         "duplicate_event_keys": duplicate_count,
     }
-
-
 def build_transition_summary(event_log: pd.DataFrame) -> pd.DataFrame:
     """Summarize activity-to-next-activity transitions and elapsed minutes."""
     data = event_log[REQUIRED_COLUMNS].copy()
@@ -86,8 +79,6 @@ def build_transition_summary(event_log: pd.DataFrame) -> pd.DataFrame:
         .reset_index(drop=True)
     )
     return summary
-
-
 def summarize_loopbacks_by_group(
     event_log: pd.DataFrame,
     group_column: str = "Arrival_Shift",
