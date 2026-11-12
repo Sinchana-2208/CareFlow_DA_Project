@@ -1,3 +1,4 @@
+
 # CareFlow — Clinical Pathway Process Mining
 
 CareFlow is a healthcare operations analytics prototype for reconstructing patient journeys from timestamped event logs, identifying process variations, measuring elapsed time between recorded events, and checking journeys against a defined reference pathway.
