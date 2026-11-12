@@ -1,6 +1,7 @@
--pandas
--numpy
--googlecolab
--matplotlib
--pm4py
--pytesy
+pandas>=2.0
+numpy>=1.24
+matplotlib>=3.7
+networkx>=3.0
+pm4py>=2.7
+jupyterlab>=4.0
+pytest

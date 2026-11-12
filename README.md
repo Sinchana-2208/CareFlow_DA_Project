@@ -1,96 +1,156 @@
-CareFlow Intelligence
 
-Clinical Pathway Process Mining and Bottleneck Analysis
+# CareFlow — Clinical Pathway Process Mining
 
-1. Project Overview
+CareFlow is a healthcare operations analytics prototype for reconstructing patient journeys from timestamped event logs, identifying process variations, measuring elapsed time between recorded events, and checking journeys against a defined reference pathway.
 
-CareFlow Intelligence is a data analytics project focused on understanding clinical process journeys through event-log analysis and process mining.
+> **Synthetic-data notice:** all included records are generated for software testing. The generator deliberately injects an `X-Ray → Triage` return into 40% of cases. This is a controlled test scenario, not a statistic about a real hospital and not evidence that any intervention improves patient care.
 
-The project aims to reconstruct process pathways, discover workflow patterns, analyze elapsed time between activities, investigate unusual process variations, and present operational insights through an interactive dashboard.
+## Problem and intended outcome
 
-The analytical approach will be refined according to the dataset and requirements confirmed with the internship mentor.
+Traditional healthcare dashboards can show aggregate measures such as average emergency-room throughput, but those summaries alone do not explain the sequence of activities behind delays and rework. CareFlow reconstructs each visit as an ordered trace so process owners can investigate common paths, rework loops, long gaps between recorded events, and deviations from a documented reference pathway.
 
-2. Problem Statement
+The project brief's target architecture uses BigQuery for event-log storage, dbt for normalization, PM4Py for process discovery, and Power BI or Looker for operational reporting. This repository now contains the local prototype plus the next-milestone BigQuery/dbt scaffolding and PM4Py runner. A live connection to a Google Cloud project and a BI dashboard are not configured here.
 
-Clinical workflows may contain multiple activities and alternative process pathways. Analyzing event sequences and elapsed times can help stakeholders understand observed workflow behavior and identify potential areas for further investigation.
+## Implemented capabilities
 
-CareFlow Intelligence aims to transform event-log data into structured, explainable, and actionable operational insights.
+- Generate a reproducible synthetic EHR event log with `Case_ID`, `Activity_Name`, and `Timestamp`.
+- Validate required fields, timestamp parsing, duplicate event keys, complete demo case boundaries, and the measured synthetic loopback rate.
+- Calculate case throughput, activity traces, process variants, and transition-level inter-event elapsed-time metrics.
+- Export a directed directly-follows graph and patient-journey timelines from the notebook.
+- Compare each observed case trace with the documented baseline pathway.
+- Export CSV artifacts for warehouse and BI consumption.
+- Run a standalone process-discovery command that emits native directly-follows / variant / baseline-conformance files and, when PM4Py is installed, PM4Py DFG results and an inductively discovered Petri-net model.
+- Provide a dbt project for BigQuery with staging, intermediate, and mart models; schema tests; and singular SQL quality tests.
+- Provide a guarded loader that only uploads records marked synthetic to a specified BigQuery demo table.
 
-3. Project Objectives
+## Repository structure
 
-- Assess and prepare the available event-log data.
-- Build a reproducible data-cleaning and validation pipeline.
-- Reconstruct process instances and their activity sequences.
-- Discover common pathway variants.
-- Analyze case duration and elapsed time between consecutive events.
-- Investigate potential process deviations where a suitable reference workflow exists.
-- Prioritize potential operational investigation opportunities using transparent metrics.
-- Develop an interactive Power BI dashboard.
-- Document the methodology, findings, and limitations.
+```text
+CareFlow_Project/
+├── CareFlow_Clinical_Pathway_Process_Mining.ipynb
+├── README.md
+├── requirements.txt
+├── requirements-cloud.txt
+├── .gitignore
+├── careflow_data/
+│   ├── raw_event_log.csv
+│   ├── clean_event_log.csv
+│   ├── case_metrics.csv
+│   ├── transition_bottlenecks.csv
+│   ├── process_variants.csv
+│   ├── process_transitions.csv
+│   ├── conformance_results.csv
+│   └── data_quality_report.csv
+├── scripts/
+│   ├── audit_event_log.py
+│   ├── run_pm4py_discovery.py
+│   └── load_synthetic_to_bigquery.py
+├── tests/
+│   └── test_careflow_event_log.py
+├── docs/
+│   └── WAREHOUSE_AND_PROCESS_MINING.md
+└── careflow_dbt/
+    ├── dbt_project.yml
+    ├── profiles.yml.example
+    ├── models/
+    │   ├── sources.yml
+    │   ├── schema.yml
+    │   ├── staging/
+    │   ├── intermediate/
+    │   └── marts/
+    └── tests/
+```
 
-4. Planned Technology Stack
+## Run the local prototype
 
-- Python
-- Pandas and NumPy
-- Jupyter Notebook
-- PM4Py
-- Matplotlib
-- Power BI
-- Git and GitHub
-- pytest
+Python 3.10 or newer is recommended. From the repository root:
 
-The final technology stack will depend on dataset suitability and internship requirements.
+```bash
+python -m venv .venv
+source .venv/bin/activate       # Linux/macOS
+# Windows PowerShell: .venv\\Scripts\\Activate.ps1
+python -m pip install --upgrade pip
+pip install -r requirements.txt
+jupyter lab CareFlow_Clinical_Pathway_Process_Mining.ipynb
+```
 
-5. Planned Analytical Questions
+Run the notebook cells from beginning to end. It generates deterministic sample data using a fixed random seed and writes CSV outputs into `careflow_data/`.
 
-1. Which process pathways occur most frequently?
-2. How much time elapses between consecutive activities?
-3. Which transitions and pathways show comparatively long durations?
-4. How do observed pathways compare with an approved reference workflow, if available?
-5. Which potential improvement opportunities deserve further investigation?
+## Run the audit, process-discovery exports, and tests
 
-6. Planned Workflow
+```bash
+python scripts/audit_event_log.py
+python scripts/run_pm4py_discovery.py
+python -m unittest discover -s tests -v
+```
 
-1. Dataset assessment
-2. Data quality analysis
-3. Data cleaning and validation
-4. Event-log preparation
-5. Exploratory data analysis
-6. Process discovery
-7. Pathway and duration analysis
-8. Process deviation analysis, where supported
-9. Improvement prioritization
-10. Power BI dashboard development
-11. Reporting and presentation
+To make PM4Py output mandatory rather than allowing the native fallback:
 
-7. Repository Structure
+```bash
+python scripts/run_pm4py_discovery.py --require-pm4py
+```
 
-- "data/" — Data-related documentation and approved local data organization
-- "notebooks/" — Analytical notebooks
-- "src/" — Reusable Python modules
-- "tests/" — Automated validation tests
-- "dashboard/" — Dashboard documentation and deliverables
-- "reports/" — Analytical reports
-- "presentation/" — Presentation materials
+Process-discovery artifacts are written to `careflow_data/process_discovery/`. The runner exports a PM4Py directly-follows graph and a Petri-net PNML model when PM4Py is installed; the native pandas-based artifacts are still created if that optional import is unavailable.
 
-8. Data Privacy
+## BigQuery + dbt next milestone
 
-Clinical datasets must be handled according to the applicable organizational requirements and permissions.
+The next-stage implementation is documented in [`docs/WAREHOUSE_AND_PROCESS_MINING.md`](docs/WAREHOUSE_AND_PROCESS_MINING.md). It contains the full setup steps; the short version is:
 
-Sensitive patient data, confidential records, credentials, and unauthorized data extracts must not be committed to a public repository.
+1. Install the existing local requirements and then `pip install -r requirements-cloud.txt`.
+2. Configure a Google Cloud project, enable BigQuery, and authenticate using an approved method.
+3. Set `GCP_PROJECT_ID` and optionally `BIGQUERY_LOCATION`.
+4. Load the synthetic data into a dedicated demo table:
 
-9. Project Status
+   ```bash
+   python scripts/load_synthetic_to_bigquery.py --dataset careflow_raw --table raw_event_log
+   ```
 
-Current stage: Project initialization and requirements definition.
+   **Warning:** the script uses `WRITE_TRUNCATE` for the specified destination table. Use it only for the dedicated synthetic demo table. It refuses to upload rows unless every row is marked `Is_Synthetic=True`.
 
-The dataset, analytical scope, and final implementation details will be confirmed before advanced analysis begins.
+5. Copy `careflow_dbt/profiles.yml.example` to `~/.dbt/profiles.yml`, review the project and authentication values, then run:
 
-10. Expected Deliverables
+   ```bash
+   cd careflow_dbt
+   dbt debug
+   dbt run
+   dbt test
+   ```
 
-- Data quality and cleaning documentation
-- Reproducible analytical notebooks and Python modules
-- Process-mining outputs, where supported by the data
-- Duration and pathway analysis
-- Interactive dashboard
-- Project report
-- Final presentation
+The raw source defaults to `careflow_raw.raw_event_log`. With dbt's default custom-schema naming, models are placed in datasets such as `<target_dataset>_staging`, `<target_dataset>_intermediate`, and `<target_dataset>_marts`. The source dataset is configurable via `--vars`.
+
+The marts include patient-case metrics, transition bottlenecks, X-Ray-to-Triage loopbacks, process variants, and exact-sequence conformance results. **Cloud load and dbt execution have not been run against an actual GCP project in this workspace** because no cloud project or credentials were provided. Run `dbt debug`, `dbt run`, and `dbt test` in your own configured environment before relying on these models.
+
+## Core event-log schema
+
+| Field | Meaning |
+|---|---|
+| `Case_ID` | Anonymous identifier for one simulated visit |
+| `Activity_Name` | Activity performed, such as Triage or X-Ray |
+| `Timestamp` | Timestamp of the event |
+| `Department` | Simulated department responsible for the event |
+| `Resource_ID` | Synthetic staff/resource identifier |
+| `Age_Band` | Synthetic age band for cohort filtering |
+| `Arrival_Shift` | Derived arrival-shift category |
+| `Return_Reason` | Populated on the injected repeat-triage event |
+| `Is_Synthetic` | Marks all records as synthetic |
+
+The first three columns are the required basis for process mining. Additional fields exist for prototype analysis and should be reviewed/minimized before any real-data deployment.
+
+## Metric definitions and caveats
+
+- **Case throughput time** = last event timestamp minus first event timestamp in a case.
+- **Inter-event elapsed time** = next event timestamp minus current event timestamp. Without queue-entry, activity-start, and activity-end timestamps, this is not pure waiting time or service time.
+- **Triage-return rate** = cases with a direct `X-Ray → Triage` transition divided by all cases.
+- **Baseline conformance** = exact sequence match against `Registration → Triage → Physician Assessment → X-Ray → Physician Reassessment → Treatment → Discharge`.
+- **Process discovery** describes behavior recorded in the event log. A mined path is not automatically a clinically approved pathway.
+
+## Responsible use and production gaps
+
+Do not commit real patient data, credentials, tokens, or service-account keys to GitHub. Before using EHR records, obtain authorization and implement the healthcare organization's privacy, security, access-control, audit, and retention requirements. Define valid clinical alternatives with process owners before treating deviation rates as quality measures. Operational impact (for example, lower waiting time after a form change) must be evaluated against valid before/after operational data; the synthetic demo cannot establish that result.
+
+## Remaining milestones
+
+1. Configure and validate the BigQuery/dbt pipeline in an authorized cloud project.
+2. Test PM4Py discovery and formal alignment-based conformance on the selected environment and clinically reviewed process definitions.
+3. Build the Power BI/Looker dashboard with process flow, return-loop KPIs, bottleneck analysis, and controlled drill-down.
+4. Replace synthetic events with authorized, de-identified data only after governance and source-schema approval.
