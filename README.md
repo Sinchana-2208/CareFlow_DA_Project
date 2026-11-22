@@ -1,80 +1,130 @@
-CareFlow Intelligence - Clinical Pathway Process Mining
+CareFlow Intelligence — Clinical Pathway Process Mining
 
-About the project
+CareFlow Intelligence is a Python-based healthcare process-mining and data analytics project. It analyzes a clinical event log to understand how recorded patient cases move through activities, how pathways vary, and how much time elapses between consecutive recorded events.
 
-CareFlow is a data analytics project that looks at recorded patient activity data to understand how cases move through different stages of a clinical process.
+The project is intended for process analysis and reporting. It does not assess clinical correctness, provide diagnoses, or support treatment decisions.
 
-The main aim is to study the activities in the event log, understand the order in which they happen, and look at the time between recorded events. We are using Python for the analysis, with plans to use Power BI to present the findings.
+Project objectives
 
-What I have worked on
+- Reconstruct the recorded activity sequence for each patient case.
+- Identify and count distinct pathway variants.
+- Analyze transitions between consecutive activities.
+- Summarize elapsed time between recorded events.
+- Flag long intervals for further investigation.
+- Present the results through an interactive dashboard.
 
-1. Transition-time analysis
+Dataset
 
-I created a Python script to calculate the time between consecutive activities for each case. It also summarizes recorded case durations and highlights long gaps between events for further investigation.
+The analysis uses the Sepsis event-log Excel workbook, with the worksheet Event Log Visual.
 
-File: src/transition_time_analysis.py
+Place the workbook in the project directory or provide its full path when running the workflow. The source dataset is not included in this repository unless separately provided.
 
-2. Patient pathway analysis
+Current dataset summary
+Metric	Result
 
-I added another script to reconstruct the activity sequence for each case and identify cases with the same sequence. The results include the number of cases following each pathway and its percentage of the dataset.
+Recorded event records	15,190
+Patient cases	1,049
+Unique activities	16
+Unique pathway variants	845
+Activity transitions	115
+Long intervals flagged for investigation (24 hours or more)	2,646
 
-File: src/pathway_variant_analysis.py
 
-Dataset and findings
+The most common complete recorded pathway identified in the current analysis is:
 
-The analysis was run using the Sepsis event-log Excel file, on the worksheet named "Event Log Visual".
+ER Registration → ER Triage → ER Sepsis Triage
 
-Some of the results from the current dataset are:
+It occurs in 35 cases (approximately 3.34% of the 1,049 cases).
 
-- Total recorded events: 15,190
-- Cases analyzed: 1,049
-- Different activities: 16
-- Unique pathway variants: 845
+These figures describe the available event log only. A recorded pathway is not necessarily a complete representation of a patient's clinical journey, and pathway frequency does not establish whether a pathway is clinically appropriate.
 
-The most common complete recorded pathway in the current analysis is:
+Analysis and outputs
+The workflow produces CSV summaries in the outputs/ directory, including:
+- workflow_overview.csv — overall dataset and workflow metrics.
+- pathway_variants.csv — pathway sequences, case counts, percentages, and activity counts.
+- activity_transition_summary.csv — transition counts, percentages, and elapsed-time summaries.
+- transition_time_summary.csv — timing summaries for recorded activity transitions.
 
-ER Registration -> ER Triage -> ER Sepsis Triage
+Long intervals are investigation signals, not confirmed bottlenecks or proof that a patient was waiting for the entire interval. The meaning of each interval depends on the clinical and operational context of the recorded activities.
 
-This pathway appears in 35 cases, which is about 3.34% of all cases analyzed.
+Interactive dashboard
+The interactive Plotly dashboard is generated at:
 
-These numbers describe the available event log. They do not tell us whether a pathway is clinically correct or incorrect.
+outputs/careflow_interactive_dashboard.html
 
-Running the scripts
+It presents key workflow metrics and visual summaries of pathway variants, activity transitions, transition timing, and long intervals. Open the generated HTML file in a web browser. An internet connection may be required for Plotly charts if the dashboard loads Plotly from its CDN.
 
-The project uses Python, pandas, and openpyxl.
 
-Install the required packages with:
+Requirements
+- Python 3.10 or later recommended.
+- Python packages listed in requirements.txt.
+- The source Sepsis event-log Excel workbook.
 
-python -m pip install pandas openpyxl
 
-To run the transition-time analysis:
+Setup
+From the repository root, create and activate a virtual environment (recommended).
+Windows PowerShell
+python -m venv .venv
 
-python .\src\transition_time_analysis.py --file "C:\path\to\Sepsis_Cases_Event_Log_Cleaned_for_Visualization.xlsx" --sheet "Event Log Visual"
+.\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+Run the workflow
+From the repository root, run the workflow report generator. Replace the example workbook path with the actual path to your Excel file.
+python -m src.run_workflow_report --input "..\Sepsis_Cases_Event_Log_Cleaned_for_Visualization (1).xlsx" --sheet "Event Log Visual" 
 
-To run the pathway analysis:
+--output-dir "outputs"
+If the workbook is stored elsewhere, provide its full path after --input.
+Generate and open the interactive dashboard
 
-python .\src\pathway_variant_analysis.py --file "C:\path\to\Sepsis_Cases_Event_Log_Cleaned_for_Visualization.xlsx" --sheet "Event Log Visual"
+After the workflow CSV outputs have been generated, run:
+python .\src\create_interactive_dashboard.py
 
-Replace the example file path with the location of the Excel file on your computer.
+Then open the dashboard:
+Start-Process .\outputs\careflow_interactive_dashboard.html
+Run tests
 
-The pathway analysis saves its results to:
-
-outputs/pathway_variants.csv
-
-Testing
-
-I added automated tests for both analysis scripts. They check the pathway sequence calculations, pathway counts and percentages, and the transition-time calculations.
-
-To run all tests:
-
+Run the automated test suite from the repository root:
 python -m unittest discover -s tests -v
+The latest project test run recorded 17 tests. Run the command above on your current checkout to verify its present status.
 
-The latest test run passed all nine tests.
+Technology stack
+- Python
+- pandas
+- openpyxl
+- Plotly
+- Matplotlib
+- HTML/CSS/JavaScript for the dashboard presentation
+- Python unittest for automated tests
 
-Current status and next steps
 
-The transition-time and pathway-variant analyses are working. The next steps are to explore the results further and use suitable outputs to build a Power BI dashboard.
+Project structure
 
-We also need to investigate the meaning of long gaps carefully. Time between two recorded activities does not necessarily mean that a patient was waiting during that entire period.
+CareFlow_Balaji_local/
+├── src/
+│   ├── run_workflow_report.py
+│   ├── create_interactive_dashboard.py
+│   ├── transition_time_analysis.py
+│   └── pathway_variant_analysis.py
+├── outputs/
+│   ├── workflow_overview.csv
+│   ├── pathway_variants.csv
+│   ├── activity_transition_summary.csv
+│   ├── transition_time_summary.csv
+│   └── long_interval_investigation.csv
+├── tests/
+├── README.md
+└── requirements.txt
 
-The project is intended for process analysis and reporting, not for making clinical decisions.
+The exact contents of src/, outputs/, and tests/ may vary by branch or project revision.
+Limitations and interpretation
+
+- The analysis reflects only the events recorded in the supplied event log.
+- Missing or unrecorded events can affect reconstructed pathways and timing.
+- Elapsed time between two recorded events does not necessarily represent patient waiting time.
+- Long intervals require contextual investigation before any operational conclusion is drawn.
+- The project is for data analysis and reporting, not clinical decision-making.
+
+
+Project status
+The core event-log analysis, pathway-variant analysis, transition-time summaries, automated tests, and interactive dashboard have been developed. The repository is intended to provide a reproducible workflow for generating the analysis outputs and dashboard from the source event-log workbook.
